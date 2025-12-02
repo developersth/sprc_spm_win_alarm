@@ -34,3 +34,42 @@
 2025-12-02 15:49:13,707 - ERROR - Cannot start monitoring - Modbus connection failed
 2025-12-02 15:49:55,231 - WARNING - Monitor is not running
 2025-12-02 15:49:55,233 - WARNING - Monitor is not running
+2025-12-02 16:40:58,271 - INFO - Configuration loaded from modbus_config.json
+2025-12-02 16:41:02,342 - ERROR - Database connection failed: connection to server at "localhost" (::1), port 5432 failed: Connection refused (0x0000274D/10061)
+	Is the server running on that host and accepting TCP/IP connections?
+connection to server at "localhost" (127.0.0.1), port 5432 failed: Connection refused (0x0000274D/10061)
+	Is the server running on that host and accepting TCP/IP connections?
+
+2025-12-02 16:41:02,348 - WARNING - Monitor is not running
+2025-12-02 16:53:50,575 - INFO - Configuration loaded from modbus_config.json
+2025-12-02 16:53:50,597 - INFO - Database connected successfully
+2025-12-02 16:53:50,603 - INFO - Loaded 12 alarm mappings from database
+2025-12-02 16:53:50,604 - INFO - Modbus Alarm Monitor initialized
+2025-12-02 16:53:50,604 - ERROR - Modbus connection error: ModbusTcpClient.__init__() got an unexpected keyword argument 'retry_on_empty'
+2025-12-02 16:53:50,604 - ERROR - Cannot start monitoring - Modbus connection failed
+2025-12-02 16:54:01,162 - WARNING - Monitor is not running
+2025-12-02 16:54:01,162 - WARNING - Monitor is not running
+2025-12-02 16:55:52,648 - INFO - Configuration loaded from modbus_config.json
+2025-12-02 16:55:52,673 - INFO - Database connected successfully
+2025-12-02 16:55:52,680 - INFO - Loaded 12 alarm mappings from database
+2025-12-02 16:55:52,680 - INFO - Modbus Alarm Monitor initialized
+2025-12-02 16:55:52,680 - ERROR - Modbus connection error: ModbusTcpClient.__init__() got an unexpected keyword argument 'retry_on_empty'
+2025-12-02 16:55:52,681 - ERROR - Cannot start monitoring - Modbus connection failed
+2025-12-02 16:55:54,995 - WARNING - Monitor is not running
+2025-12-02 16:55:54,996 - WARNING - Monitor is not running
+2025-12-02 16:57:26,941 - INFO - Configuration loaded from modbus_config.json
+2025-12-02 16:57:26,972 - INFO - Database connected successfully
+2025-12-02 16:57:26,981 - INFO - Loaded 12 alarm mappings from database
+2025-12-02 16:57:26,981 - INFO - Modbus Alarm Monitor initialized
+2025-12-02 16:57:26,982 - ERROR - Modbus connection error: ModbusTcpClient.__init__() got an unexpected keyword argument 'retry_on_empty'
+2025-12-02 16:57:26,982 - ERROR - Cannot start monitoring - Modbus connection failed
+2025-12-02 16:57:30,167 - WARNING - Monitor is not running
+2025-12-02 16:57:30,168 - WARNING - Monitor is not running
+2025-12-02 17:02:41,598 - INFO - Configuration loaded from modbus_config.json
+2025-12-02 17:02:41,621 - INFO - Database connected successfully
+2025-12-02 17:02:41,628 - INFO - Loaded 12 alarm mappings from database
+2025-12-02 17:02:41,628 - INFO - Modbus Alarm Monitor initialized
+2025-12-02 17:02:41,629 - ERROR - Modbus connection error: ModbusTcpClient.__init__() got an unexpected keyword argument 'retry_on_empty'
+2025-12-02 17:02:41,629 - ERROR - Cannot start monitoring - Modbus connection failed
+2025-12-02 17:02:47,461 - WARNING - Monitor is not running
+2025-12-02 17:02:47,461 - WARNING - Monitor is not running

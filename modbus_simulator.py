@@ -1,7 +1,7 @@
 # โค้ดที่เรียบง่ายสำหรับ pymodbus 3.11.4
 from pymodbus.server import StartTcpServer
-from pymodbus.datastore import ModbusSequentialDataBlock, ModbusSlaveContext, ModbusServerContext
-from pymodbus.device import ModbusDeviceIdentification
+from pymodbus.datastore import ModbusSequentialDataBlock, ModbusServerContext, ModbusDeviceContext
+from pymodbus import ModbusDeviceIdentification
 
 import threading
 import time
@@ -19,17 +19,15 @@ class ModbusSimulator:
         self.running = False
 
         # สร้าง datastore
-        store = ModbusSlaveContext(
-            di=ModbusSequentialDataBlock(0, [0]*1000),
-            co=ModbusSequentialDataBlock(0, [0]*1000),
-            hr=ModbusSequentialDataBlock(0, [0]*1000),
-            ir=ModbusSequentialDataBlock(0, [0]*1000),
-            zero_mode=True
+        datablock = ModbusSequentialDataBlock(0, [0]*1000)
+        store = ModbusDeviceContext(
+            di=datablock,
+            co=datablock,
+            hr=datablock,
+            ir=datablock
         )
-        self.context = ModbusServerContext(slaves=store, single=True)
-        
-        # เก็บ reference ถึง coils สำหรับการจำลอง
-        self.coils = store.getStore('c')
+        self.context = ModbusServerContext(store, single=True)
+        self.store = store
 
         # Device identification
         self.identity = ModbusDeviceIdentification()
@@ -75,14 +73,14 @@ class ModbusSimulator:
                 if random.random() < 0.15:
                     addr = random.choice(alarm_addresses)
                     
-                    # อ่านค่าปัจจุบัน
-                    current_value = self.coils.getValues(addr, 1)[0]
+                    # อ่านค่าปัจจุบัน (function code 1 = read coils)
+                    current_value = self.store.getValues(1, addr, 1)[0]
                     
                     # สลับค่า (0->1, 1->0)
                     new_value = 1 if current_value == 0 else 0
                     
-                    # ตั้งค่าใหม่
-                    self.coils.setValues(addr, [new_value])
+                    # ตั้งค่าใหม่ (function code 5 = write single coil)
+                    self.store.setValues(5, addr, [new_value])
                     
                     # Log ด้วยแอดเดรส Modbus ที่ถูกต้อง (+1)
                     modbus_addr = addr + 1
