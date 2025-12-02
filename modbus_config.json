@@ -1,0 +1,20 @@
+{
+  "modbus": {
+    "host": "192.168.1.100",
+    "port": 502,
+    "timeout": 3,
+    "retry_on_empty": true,
+    "retries": 3
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "database": "alarm_history",
+    "user": "admin",
+    "password": "admin123"
+  },
+  "monitoring": {
+    "scan_interval": 1.0,
+    "machine_name": "Mastercomm"
+  }
+}
