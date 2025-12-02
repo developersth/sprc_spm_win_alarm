@@ -1,11 +1,11 @@
 import time
 import logging
 from datetime import datetime
-import psycopg2
 from pymodbus.client import ModbusTcpClient
 from pymodbus.exceptions import ModbusException
 import threading
 import json
+from database import DatabaseManager
 
 # Configure logging
 logging.basicConfig(
@@ -22,16 +22,16 @@ class ModbusAlarmMonitor:
         """Initialize Modbus Alarm Monitor"""
         self.config = self.load_config(config_file)
         self.modbus_client = None
-        self.db_connection = None
+        self.db_manager = None
         self.alarm_states = {}  # Track previous alarm states
         self.running = False
         self.monitor_thread = None
         
-        # Connect to database
-        self.connect_database()
+        # Initialize database manager
+        self.db_manager = DatabaseManager(self.config)
         
         # Load alarm mapping from database
-        self.alarm_mapping = self.load_alarm_mapping()
+        self.alarm_mapping = self.db_manager.load_alarm_mapping()
         
         logging.info("Modbus Alarm Monitor initialized")
     
@@ -46,10 +46,20 @@ class ModbusAlarmMonitor:
             logging.warning(f"Config file not found. Using default configuration.")
             return {
                 "modbus": {
-                    "host": "192.168.1.100",
-                    "port": 502,
+                    "mode": "real",
+                    "hosts": {
+                        "sim": {
+                            "host": "localhost",
+                            "port": 1502
+                        },
+                        "real": {
+                            "host": "192.168.1.100",
+                            "port": 502
+                        }
+                    },
                     "timeout": 3,
-                    "retry_on_empty": True,
+                    "reconnect_delay": 0.1,
+                    "reconnect_delay_max": 300,
                     "retries": 3
                 },
                 "database": {
@@ -65,75 +75,26 @@ class ModbusAlarmMonitor:
                 }
             }
     
-    def connect_database(self):
-        """Connect to PostgreSQL database"""
-        try:
-            db_config = self.config['database']
-            self.db_connection = psycopg2.connect(
-                host=db_config['host'],
-                port=db_config['port'],
-                database=db_config['database'],
-                user=db_config['user'],
-                password=db_config['password']
-            )
-            logging.info("Database connected successfully")
-        except Exception as e:
-            logging.error(f"Database connection failed: {e}")
-            raise
-    
-    def load_alarm_mapping(self):
-        """Load alarm mapping configuration from database"""
-        try:
-            cursor = self.db_connection.cursor()
-            cursor.execute("""
-                SELECT item, description, signal_type, close_status, 
-                       alarm_status, priority, address, bit_no, 
-                       modbus_function, enabled
-                FROM alarm_mapping
-                WHERE enabled = 'ENABLE'
-                ORDER BY item
-            """)
-            
-            mappings = []
-            for row in cursor.fetchall():
-                mapping = {
-                    'item': row[0],
-                    'description': row[1],
-                    'signal_type': row[2],
-                    'close_status': row[3],
-                    'alarm_status': row[4],
-                    'priority': row[5],
-                    'address': int(row[6]),
-                    'bit_no': row[7],
-                    'modbus_function': row[8],
-                    'enabled': row[9]
-                }
-                mappings.append(mapping)
-                # Initialize alarm state
-                self.alarm_states[mapping['item']] = False
-            
-            cursor.close()
-            logging.info(f"Loaded {len(mappings)} alarm mappings from database")
-            return mappings
-            
-        except Exception as e:
-            logging.error(f"Error loading alarm mapping: {e}")
-            return []
-    
     def connect_modbus(self):
         """Connect to Modbus TCP server"""
         try:
             modbus_config = self.config['modbus']
+            
+            # Get mode and select host configuration
+            mode = modbus_config.get('mode', 'real')
+            host_config = modbus_config['hosts'][mode]
+            
+            logging.info(f"Connecting to Modbus in {mode.upper()} mode")
+            
             self.modbus_client = ModbusTcpClient(
-                host=modbus_config['host'],
-                port=modbus_config['port'],
+                host=host_config['host'],
+                port=host_config['port'],
                 timeout=modbus_config['timeout'],
-                retry_on_empty=modbus_config['retry_on_empty'],
                 retries=modbus_config['retries']
             )
             
             if self.modbus_client.connect():
-                logging.info(f"Modbus connected to {modbus_config['host']}:{modbus_config['port']}")
+                logging.info(f"Modbus connected to {host_config['host']}:{host_config['port']} ({mode.upper()} mode)")
                 return True
             else:
                 logging.error("Failed to connect to Modbus server")
@@ -142,11 +103,12 @@ class ModbusAlarmMonitor:
         except Exception as e:
             logging.error(f"Modbus connection error: {e}")
             return False
+            return False
     
     def read_coil(self, address, count=1):
         """Read coil status from Modbus (Function Code 01)"""
         try:
-            response = self.modbus_client.read_coils(address, count)
+            response = self.modbus_client.read_coils(address, count=count)
             if not response.isError():
                 return response.bits[:count]
             else:
@@ -159,7 +121,7 @@ class ModbusAlarmMonitor:
     def read_discrete_input(self, address, count=1):
         """Read discrete input from Modbus (Function Code 02)"""
         try:
-            response = self.modbus_client.read_discrete_inputs(address, count)
+            response = self.modbus_client.read_discrete_inputs(address, count=count)
             if not response.isError():
                 return response.bits[:count]
             else:
@@ -169,39 +131,9 @@ class ModbusAlarmMonitor:
             logging.error(f"Modbus exception reading discrete input {address}: {e}")
             return None
     
-    def generate_log_number(self):
-        """Generate unique log number"""
-        timestamp = int(time.time() * 1000)
-        return str(timestamp)[-10:]
-    
     def save_alarm_to_database(self, alarm_info):
         """Save alarm event to database"""
-        try:
-            cursor = self.db_connection.cursor()
-            
-            log_no = self.generate_log_number()
-            
-            cursor.execute("""
-                INSERT INTO alarm_history 
-                (log_no, date_time, type, description, status, machine)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (
-                log_no,
-                datetime.now(),
-                alarm_info['type'],
-                alarm_info['description'],
-                alarm_info['status'],
-                self.config['monitoring']['machine_name']
-            ))
-            
-            self.db_connection.commit()
-            cursor.close()
-            
-            logging.info(f"Alarm saved: {alarm_info['description']} - {alarm_info['status']}")
-            
-        except Exception as e:
-            logging.error(f"Error saving alarm to database: {e}")
-            self.db_connection.rollback()
+        self.db_manager.save_alarm(alarm_info, self.config['monitoring']['machine_name'])
     
     def process_alarm(self, mapping, current_state):
         """Process alarm state change"""
@@ -310,7 +242,7 @@ class ModbusAlarmMonitor:
         status = {
             'running': self.running,
             'modbus_connected': self.modbus_client.is_socket_open() if self.modbus_client else False,
-            'database_connected': self.db_connection is not None and not self.db_connection.closed,
+            'database_connected': self.db_manager.is_connected(),
             'active_alarms': sum(1 for state in self.alarm_states.values() if state),
             'total_monitored': len(self.alarm_mapping)
         }
@@ -320,8 +252,8 @@ class ModbusAlarmMonitor:
         """Cleanup on deletion"""
         self.stop()
         
-        if self.db_connection:
-            self.db_connection.close()
+        if self.db_manager:
+            self.db_manager.close()
 
 def main():
     """Main function for standalone execution"""

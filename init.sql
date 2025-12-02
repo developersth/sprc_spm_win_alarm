@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS alarm_mapping (
     signal_type VARCHAR(20) NOT NULL,
     open_status VARCHAR(20),
     close_status VARCHAR(20),
-    enabled VARCHAR(20),
+    enabled BOOLEAN,
     alarm_status VARCHAR(20),
     priority VARCHAR(20),
     address VARCHAR(10),
@@ -38,18 +38,18 @@ CREATE INDEX idx_alarm_history_log_no ON alarm_history(log_no);
 
 -- Insert sample alarm mapping data
 INSERT INTO alarm_mapping (item, description, signal_type, open_status, close_status, enabled, alarm_status, priority, address, bit_no, rw, modbus_data_type, modbus_function, comments) VALUES
-(1, 'Mastercomm Restart', 'Boolean', 'NORMAL', 'RESTART', 'ENABLE', 'CLOSE', 'HIGH', '0002', 0, 'R', 'Coil', '01: READ OUTPUT STATUS', NULL),
-(2, 'Mastercomm GPS Fault', 'Boolean', 'NORMAL', 'FAULT', 'ENABLE', 'CLOSE', 'HIGH', '0004', 0, 'R', 'Coil', '01: READ OUTPUT STATUS', NULL),
-(3, 'SPM BUOY Power/Communications Fault', 'Boolean', 'NORMAL', 'FAULT', 'ENABLE', 'CLOSE', 'HIGH', '0017', 0, 'R', 'Coil', '01: READ OUTPUT STATUS', NULL),
-(4, 'SPM BUOY WA Restart flag', 'Boolean', 'NORMAL', 'RESTART', 'ENABLE', 'CLOSE', 'HIGH', '0018', 0, 'R', 'Coil', '01: READ OUTPUT STATUS', NULL),
-(5, 'SPM BUOY GPS Fault', 'Boolean', 'NORMAL', 'FAULT', 'ENABLE', 'CLOSE', 'HIGH', '0019', 0, 'R', 'Coil', '01: READ OUTPUT STATUS', NULL),
-(6, 'SPM BUOY Sensor A fault', 'Boolean', 'NORMAL', 'FAULT', 'ENABLE', 'CLOSE', 'HIGH', '0020', 0, 'R', 'Coil', '01: READ OUTPUT STATUS', NULL),
-(7, 'SPM BUOY Sensor B fault', 'Boolean', 'NORMAL', 'FAULT', 'ENABLE', 'CLOSE', 'HIGH', '0021', 0, 'R', 'Coil', '01: READ OUTPUT STATUS', NULL),
-(8, 'RECEIVING TERMINALS Power/Communications Fault', 'Boolean', 'NORMAL', 'FAULT', 'ENABLE', 'CLOSE', 'HIGH', '0049', 0, 'R', 'Coil', '01: READ OUTPUT STATUS', NULL),
-(9, 'RECEIVING TERMINALS WA Restart flag', 'Boolean', 'NORMAL', 'RESTART', 'ENABLE', 'CLOSE', 'HIGH', '0050', 0, 'R', 'Coil', '01: READ OUTPUT STATUS', NULL),
-(10, 'RECEIVING TERMINALS GPS Fault', 'Boolean', 'NORMAL', 'FAULT', 'ENABLE', 'CLOSE', 'HIGH', '0051', 0, 'R', 'Coil', '01: READ OUTPUT STATUS', NULL),
-(11, 'RECEIVING TERMINALS Sensor A fault', 'Boolean', 'NORMAL', 'FAULT', 'ENABLE', 'CLOSE', 'HIGH', '0052', 0, 'R', 'Coil', '01: READ OUTPUT STATUS', NULL),
-(12, 'RECEIVING TERMINALS Sensor B fault', 'Boolean', 'NORMAL', 'FAULT', 'ENABLE', 'CLOSE', 'HIGH', '0053', 0, 'R', 'Coil', '01: READ OUTPUT STATUS', NULL);
+(1, 'Mastercomm Restart', 'Boolean', 'NORMAL', 'RESTART', TRUE, 'CLOSE', 'HIGH', '0002', 0, 'R', 'Coil', '01: READ OUTPUT STATUS', NULL),
+(2, 'Mastercomm GPS Fault', 'Boolean', 'NORMAL', 'FAULT', TRUE, 'CLOSE', 'HIGH', '0004', 0, 'R', 'Coil', '01: READ OUTPUT STATUS', NULL),
+(3, 'SPM BUOY Power/Communications Fault', 'Boolean', 'NORMAL', 'FAULT', TRUE, 'CLOSE', 'HIGH', '0017', 0, 'R', 'Coil', '01: READ OUTPUT STATUS', NULL),
+(4, 'SPM BUOY WA Restart flag', 'Boolean', 'NORMAL', 'RESTART', TRUE, 'CLOSE', 'HIGH', '0018', 0, 'R', 'Coil', '01: READ OUTPUT STATUS', NULL),
+(5, 'SPM BUOY GPS Fault', 'Boolean', 'NORMAL', 'FAULT', TRUE, 'CLOSE', 'HIGH', '0019', 0, 'R', 'Coil', '01: READ OUTPUT STATUS', NULL),
+(6, 'SPM BUOY Sensor A fault', 'Boolean', 'NORMAL', 'FAULT', TRUE, 'CLOSE', 'HIGH', '0020', 0, 'R', 'Coil', '01: READ OUTPUT STATUS', NULL),
+(7, 'SPM BUOY Sensor B fault', 'Boolean', 'NORMAL', 'FAULT', TRUE, 'CLOSE', 'HIGH', '0021', 0, 'R', 'Coil', '01: READ OUTPUT STATUS', NULL),
+(8, 'RECEIVING TERMINALS Power/Communications Fault', 'Boolean', 'NORMAL', 'FAULT', TRUE, 'CLOSE', 'HIGH', '0049', 0, 'R', 'Coil', '01: READ OUTPUT STATUS', NULL),
+(9, 'RECEIVING TERMINALS WA Restart flag', 'Boolean', 'NORMAL', 'RESTART', TRUE, 'CLOSE', 'HIGH', '0050', 0, 'R', 'Coil', '01: READ OUTPUT STATUS', NULL),
+(10, 'RECEIVING TERMINALS GPS Fault', 'Boolean', 'NORMAL', 'FAULT', TRUE, 'CLOSE', 'HIGH', '0051', 0, 'R', 'Coil', '01: READ OUTPUT STATUS', NULL),
+(11, 'RECEIVING TERMINALS Sensor A fault', 'Boolean', 'NORMAL', 'FAULT', TRUE, 'CLOSE', 'HIGH', '0052', 0, 'R', 'Coil', '01: READ OUTPUT STATUS', NULL),
+(12, 'RECEIVING TERMINALS Sensor B fault', 'Boolean', 'NORMAL', 'FAULT', TRUE, 'CLOSE', 'HIGH', '0053', 0, 'R', 'Coil', '01: READ OUTPUT STATUS', NULL);
 
 -- Insert sample alarm history data
 INSERT INTO alarm_history (log_no, date_time, type, description, status, machine) VALUES

@@ -85,7 +85,7 @@ class ModbusSimulator:
                     # Log ด้วยแอดเดรส Modbus ที่ถูกต้อง (+1)
                     modbus_addr = addr + 1
                     status = "ACTIVE" if new_value == 1 else "CLEARED"
-                    logger.info(f"Alarm at Modbus address {modbus_addr}: {status}")
+                    logger.info(f"[SIM] Alarm at Modbus address {modbus_addr}: {status}")
                 
                 time.sleep(3)
                 
@@ -103,7 +103,8 @@ if __name__ == "__main__":
     sim = ModbusSimulator()
     try:
         print("=" * 60)
-        print("Modbus Alarm Simulator")
+        print("Modbus Alarm Simulator (SIM)")
+        print("=" * 60)
         print(f"Listening on: 0.0.0.0:1502")
         print("Simulating alarms at addresses: 2, 4, 17, 18, 19, 20, 21, 49, 50, 51, 52, 53")
         print("Press Ctrl+C to stop")

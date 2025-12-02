@@ -1,12 +1,11 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from datetime import datetime
-import psycopg2
-from psycopg2 import pool
 from tkcalendar import DateEntry
 import threading
 import csv
 import json
+from database import DatabaseManager
 
 # สมมติว่าไฟล์นี้มีอยู่จริงสำหรับการรันโค้ด
 # from modbus_alarm_service import ModbusAlarmMonitor 
@@ -50,21 +49,23 @@ class AlarmHistoryApp:
         self.modbus_monitor = None
         self.monitor_status_label = None
         
-        # Database connection pool - *ใช้การตั้งค่าเดิม*
+        # Database manager configuration
+        db_config = {
+            'database': {
+                'host': 'localhost',
+                'port': 5432,
+                'database': 'alarm_history',
+                'user': 'admin',
+                'password': 'admin123'
+            }
+        }
+        
         try:
-            self.connection_pool = psycopg2.pool.SimpleConnectionPool(
-                1, 10,
-                user="admin",
-                password="admin123",
-                host="localhost",
-                port="5432",
-                database="alarm_history"
-            )
-            if self.connection_pool:
-                print("Connection pool created successfully")
+            self.db_manager = DatabaseManager(db_config)
+            print("Database connection established successfully")
         except Exception as e:
             messagebox.showerror("Database Error", f"Cannot connect to database:\n{str(e)}")
-            # self.connection_pool = None 
+            self.db_manager = None 
 
         self.setup_styles()
         self.create_widgets()
@@ -73,17 +74,6 @@ class AlarmHistoryApp:
         # Start status update timer
         self.update_monitor_status()
         
-    def get_connection(self):
-        """Get connection from pool"""
-        if hasattr(self, 'connection_pool') and self.connection_pool:
-            return self.connection_pool.getconn()
-        return None
-    
-    def return_connection(self, connection):
-        """Return connection to pool"""
-        if hasattr(self, 'connection_pool') and self.connection_pool and connection:
-            self.connection_pool.putconn(connection)
-
     def setup_styles(self):
         """Configure ttk styles for Dark Mode"""
         style = ttk.Style()
@@ -513,40 +503,21 @@ class AlarmHistoryApp:
     
     def load_descriptions(self):
         """Load unique descriptions for filter"""
-        connection = None
-        try:
-            connection = self.get_connection()
-            if not connection: return
-            cursor = connection.cursor()
-            cursor.execute("SELECT DISTINCT description FROM alarm_history ORDER BY description")
-            descriptions = ['All'] + [row[0] for row in cursor.fetchall()]
-            self.description_combo['values'] = descriptions
-            cursor.close()
-        except Exception:
-            pass
-        finally:
-            if connection:
-                self.return_connection(connection)
+        if not self.db_manager:
+            return
+        descriptions = self.db_manager.get_distinct_descriptions()
+        self.description_combo['values'] = descriptions
     
     def load_data(self):
         """Load data from database"""
-        connection = None
+        if not self.db_manager:
+            return
+        
         try:
             for item in self.tree.get_children():
                 self.tree.delete(item)
             
-            connection = self.get_connection()
-            if not connection: return
-            cursor = connection.cursor()
-            
-            query = """
-                SELECT log_no, date_time, type, description, status, machine 
-                FROM alarm_history 
-                ORDER BY date_time DESC
-                LIMIT 1000
-            """
-            cursor.execute(query)
-            rows = cursor.fetchall()
+            rows = self.db_manager.get_alarm_history(limit=1000)
             
             for idx, row in enumerate(rows, start=1):
                 log_no, date_time, alarm_type, description, status, machine = row
@@ -568,31 +539,21 @@ class AlarmHistoryApp:
                 ), tags=(tag,))
             
             self.record_label.config(text=f"Total Records: {len(rows)}")
-            cursor.close()
             
-        except Exception:
-            pass
-        finally:
-            if connection:
-                self.return_connection(connection)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load data: {str(e)}")
     
     def search_data(self):
         """Search data with filters"""
-        connection = None
+        if not self.db_manager:
+            return
+        
         try:
             for item in self.tree.get_children():
                 self.tree.delete(item)
             
-            connection = self.get_connection()
-            if not connection: return
-            cursor = connection.cursor()
-            
-            query = """
-                SELECT log_no, date_time, type, description, status, machine 
-                FROM alarm_history 
-                WHERE 1=1
-            """
-            params = []
+            # Build filters dictionary
+            filters = {}
             
             # Date range filter
             try:
@@ -604,8 +565,8 @@ class AlarmHistoryApp:
                     f"{self.to_date.get_date().strftime('%Y-%m-%d')} {self.to_time.get()}",
                     '%Y-%m-%d %H:%M:%S'
                 )
-                query += " AND date_time BETWEEN %s AND %s"
-                params.extend([from_datetime, to_datetime])
+                filters['start_date'] = from_datetime
+                filters['end_date'] = to_datetime
             except ValueError:
                 messagebox.showwarning("Warning", "Invalid time format (must be HH:MM:SS)", parent=self.root)
                 return
@@ -613,26 +574,18 @@ class AlarmHistoryApp:
                 pass
             
             if self.type_var.get() != 'All':
-                query += " AND type = %s"
-                params.append(self.type_var.get())
+                filters['alarm_type'] = self.type_var.get()
             
             if self.description_var.get() != 'All':
-                query += " AND description = %s"
-                params.append(self.description_var.get())
+                filters['description'] = self.description_var.get()
             
             if self.status_var.get() != 'All':
-                query += " AND status = %s"
-                params.append(self.status_var.get())
+                filters['status'] = self.status_var.get()
             
             if self.search_var.get():
-                query += " AND (description ILIKE %s OR log_no ILIKE %s OR machine ILIKE %s)"
-                search_term = f"%{self.search_var.get()}%"
-                params.extend([search_term, search_term, search_term])
+                filters['search_text'] = self.search_var.get()
             
-            query += " ORDER BY date_time DESC"
-            
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
+            rows = self.db_manager.get_alarm_history(filters=filters)
             
             for idx, row in enumerate(rows, start=1):
                 log_no, date_time, alarm_type, description, status, machine = row
@@ -654,13 +607,9 @@ class AlarmHistoryApp:
                 ), tags=(tag,))
             
             self.record_label.config(text=f"Total Records: {len(rows)}")
-            cursor.close()
             
         except Exception as e:
             messagebox.showerror("Error", f"Error searching data:\n{str(e)}")
-        finally:
-            if connection:
-                self.return_connection(connection)
     
     def export_csv(self):
         """Export data to CSV"""
@@ -689,8 +638,8 @@ class AlarmHistoryApp:
         if hasattr(self, 'modbus_monitor') and self.modbus_monitor:
             self.modbus_monitor.stop()
         
-        if hasattr(self, 'connection_pool') and self.connection_pool:
-            self.connection_pool.closeall()
+        if hasattr(self, 'db_manager') and self.db_manager:
+            self.db_manager.close()
 
 def main():
     root = tk.Tk()

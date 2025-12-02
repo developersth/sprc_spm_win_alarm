@@ -1,9 +1,19 @@
 {
   "modbus": {
-    "host": "192.168.1.100",
-    "port": 502,
+    "mode": "sim",
+    "hosts": {
+      "sim": {
+        "host": "localhost",
+        "port": 1502
+      },
+      "real": {
+        "host": "192.168.1.100",
+        "port": 502
+      }
+    },
     "timeout": 3,
-    "retry_on_empty": true,
+    "reconnect_delay": 0.1,
+    "reconnect_delay_max": 300,
     "retries": 3
   },
   "database": {
@@ -15,6 +25,6 @@
   },
   "monitoring": {
     "scan_interval": 1.0,
-    "machine_name": "Mastercomm"
+    "machine_name": "SIM"
   }
 }
