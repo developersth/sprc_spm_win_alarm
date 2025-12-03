@@ -6,19 +6,13 @@ from pymodbus.exceptions import ModbusException
 import threading
 import json
 from database import DatabaseManager
+from log_manager import setup_logger
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('alarm_service.log'),
-        logging.StreamHandler()
-    ]
-)
+# Configure logging with daily rotation
+logger = setup_logger('alarm_service', log_dir='logs')
 
 class ModbusAlarmMonitor:
-    def __init__(self, config_file='modbus_config.json'):
+    def __init__(self, config_file='app_config.json'):
         """Initialize Modbus Alarm Monitor"""
         self.config = self.load_config(config_file)
         self.modbus_client = None
@@ -33,17 +27,17 @@ class ModbusAlarmMonitor:
         # Load alarm mapping from database
         self.alarm_mapping = self.db_manager.load_alarm_mapping()
         
-        logging.info("Modbus Alarm Monitor initialized")
+        logger.info("Modbus Alarm Monitor initialized")
     
     def load_config(self, config_file):
         """Load configuration from JSON file"""
         try:
             with open(config_file, 'r') as f:
                 config = json.load(f)
-            logging.info(f"Configuration loaded from {config_file}")
+            logger.info(f"Configuration loaded from {config_file}")
             return config
         except FileNotFoundError:
-            logging.warning(f"Config file not found. Using default configuration.")
+            logger.warning(f"Config file not found. Using default configuration.")
             return {
                 "modbus": {
                     "mode": "real",
@@ -84,7 +78,7 @@ class ModbusAlarmMonitor:
             mode = modbus_config.get('mode', 'real')
             host_config = modbus_config['hosts'][mode]
             
-            logging.info(f"Connecting to Modbus in {mode.upper()} mode")
+            logger.info(f"Connecting to Modbus in {mode.upper()} mode")
             
             self.modbus_client = ModbusTcpClient(
                 host=host_config['host'],
@@ -94,15 +88,14 @@ class ModbusAlarmMonitor:
             )
             
             if self.modbus_client.connect():
-                logging.info(f"Modbus connected to {host_config['host']}:{host_config['port']} ({mode.upper()} mode)")
+                logger.info(f"Modbus connected to {host_config['host']}:{host_config['port']} ({mode.upper()} mode)")
                 return True
             else:
-                logging.error("Failed to connect to Modbus server")
+                logger.error("Failed to connect to Modbus server")
                 return False
                 
         except Exception as e:
-            logging.error(f"Modbus connection error: {e}")
-            return False
+            logger.error(f"Modbus connection error: {e}")
             return False
     
     def read_coil(self, address, count=1):
@@ -112,10 +105,10 @@ class ModbusAlarmMonitor:
             if not response.isError():
                 return response.bits[:count]
             else:
-                logging.error(f"Error reading coil at address {address}")
+                logger.error(f"Error reading coil at address {address}")
                 return None
         except ModbusException as e:
-            logging.error(f"Modbus exception reading coil {address}: {e}")
+            logger.error(f"Modbus exception reading coil {address}: {e}")
             return None
     
     def read_discrete_input(self, address, count=1):
@@ -125,10 +118,10 @@ class ModbusAlarmMonitor:
             if not response.isError():
                 return response.bits[:count]
             else:
-                logging.error(f"Error reading discrete input at address {address}")
+                logger.error(f"Error reading discrete input at address {address}")
                 return None
         except ModbusException as e:
-            logging.error(f"Modbus exception reading discrete input {address}: {e}")
+            logger.error(f"Modbus exception reading discrete input {address}: {e}")
             return None
     
     def save_alarm_to_database(self, alarm_info):
@@ -157,12 +150,12 @@ class ModbusAlarmMonitor:
             
             # Log state change
             state_text = "ACTIVE" if current_state else "CLEARED"
-            logging.info(f"Alarm {item}: {mapping['description']} - {state_text}")
+            logger.info(f"Alarm {item}: {mapping['description']} - {state_text}")
     
     def scan_alarms(self):
         """Scan all configured alarms"""
         if not self.modbus_client or not self.modbus_client.is_socket_open():
-            logging.warning("Modbus not connected. Attempting reconnection...")
+            logger.warning("Modbus not connected. Attempting reconnection...")
             if not self.connect_modbus():
                 return
         
@@ -176,7 +169,7 @@ class ModbusAlarmMonitor:
                 elif '02' in mapping['modbus_function']:  # Read Discrete Inputs
                     result = self.read_discrete_input(address)
                 else:
-                    logging.warning(f"Unsupported Modbus function for {mapping['description']}")
+                    logger.warning(f"Unsupported Modbus function for {mapping['description']}")
                     continue
                 
                 if result is not None and len(result) > 0:
@@ -184,13 +177,13 @@ class ModbusAlarmMonitor:
                     self.process_alarm(mapping, current_state)
                     
             except Exception as e:
-                logging.error(f"Error scanning alarm {mapping['description']}: {e}")
+                logger.error(f"Error scanning alarm {mapping['description']}: {e}")
     
     def monitoring_loop(self):
         """Main monitoring loop"""
         scan_interval = self.config['monitoring']['scan_interval']
         
-        logging.info("Monitoring started")
+        logger.info("Monitoring started")
         
         while self.running:
             try:
@@ -198,33 +191,33 @@ class ModbusAlarmMonitor:
                 time.sleep(scan_interval)
                 
             except KeyboardInterrupt:
-                logging.info("Monitoring interrupted by user")
+                logger.info("Monitoring interrupted by user")
                 break
             except Exception as e:
-                logging.error(f"Error in monitoring loop: {e}")
+                logger.error(f"Error in monitoring loop: {e}")
                 time.sleep(5)  # Wait before retry
     
     def start(self):
         """Start alarm monitoring"""
         if self.running:
-            logging.warning("Monitor is already running")
+            logger.warning("Monitor is already running")
             return
         
         # Connect to Modbus
         if not self.connect_modbus():
-            logging.error("Cannot start monitoring - Modbus connection failed")
+            logger.error("Cannot start monitoring - Modbus connection failed")
             return
         
         self.running = True
         self.monitor_thread = threading.Thread(target=self.monitoring_loop, daemon=True)
         self.monitor_thread.start()
         
-        logging.info("Alarm monitoring started")
+        logger.info("Alarm monitoring started")
     
     def stop(self):
         """Stop alarm monitoring"""
         if not self.running:
-            logging.warning("Monitor is not running")
+            logger.warning("Monitor is not running")
             return
         
         self.running = False
@@ -235,7 +228,7 @@ class ModbusAlarmMonitor:
         if self.modbus_client:
             self.modbus_client.close()
         
-        logging.info("Alarm monitoring stopped")
+        logger.info("Alarm monitoring stopped")
     
     def get_status(self):
         """Get current monitoring status"""

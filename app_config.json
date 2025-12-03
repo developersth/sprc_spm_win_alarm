@@ -1,4 +1,8 @@
 {
+  "app": {
+    "name": "Alarm History Log System",
+    "version": "1.0.0"
+  },
   "modbus": {
     "mode": "sim",
     "hosts": {

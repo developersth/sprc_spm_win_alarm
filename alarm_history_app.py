@@ -29,7 +29,7 @@ ModbusAlarmMonitor = ModbusAlarmMonitor_Dummy
 class AlarmHistoryApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Alarm History Log System with Modbus Monitor")
+        self.root.title("SPRC SPM Alarm History Log System")
         self.root.geometry("1500x750")
         
         # 🎨 **DARK MODE COLOR PALETTE**
@@ -49,19 +49,36 @@ class AlarmHistoryApp:
         self.modbus_monitor = None
         self.monitor_status_label = None
         
-        # Database manager configuration
-        db_config = {
-            'database': {
-                'host': 'localhost',
-                'port': 5432,
-                'database': 'alarm_history',
-                'user': 'admin',
-                'password': 'admin123'
+        # Load configuration from app_config.json
+        try:
+            with open('app_config.json', 'r') as f:
+                config = json.load(f)
+            print("Configuration loaded from app_config.json")
+        except FileNotFoundError:
+            print("app_config.json not found. Using default configuration.")
+            config = {
+                'database': {
+                    'host': 'localhost',
+                    'port': 5432,
+                    'database': 'alarm_history',
+                    'user': 'admin',
+                    'password': 'admin123'
+                }
             }
-        }
+        except json.JSONDecodeError as e:
+            print(f"Error parsing app_config.json: {e}")
+            config = {
+                'database': {
+                    'host': 'localhost',
+                    'port': 5432,
+                    'database': 'alarm_history',
+                    'user': 'admin',
+                    'password': 'admin123'
+                }
+            }
         
         try:
-            self.db_manager = DatabaseManager(db_config)
+            self.db_manager = DatabaseManager(config)
             print("Database connection established successfully")
         except Exception as e:
             messagebox.showerror("Database Error", f"Cannot connect to database:\n{str(e)}")
@@ -438,13 +455,13 @@ class AlarmHistoryApp:
     def open_config_window(self):
         """Open configuration window"""
         config_window = tk.Toplevel(self.root)
-        config_window.title("Modbus Configuration")
+        config_window.title("Application Configuration")
         config_window.geometry("500x300")
         config_window.configure(bg=self.primary_bg)
         config_window.resizable(False, False)
         
         try:
-            with open('modbus_config.json', 'r') as f:
+            with open('app_config.json', 'r') as f:
                 config = json.load(f)
         except:
             config = {
@@ -482,7 +499,7 @@ class AlarmHistoryApp:
                 config['modbus']['port'] = int(port_entry.get())
                 config['monitoring']['scan_interval'] = float(interval_entry.get())
                 
-                with open('modbus_config.json', 'w') as f:
+                with open('app_config.json', 'w') as f:
                     json.dump(config, f, indent=2)
                 
                 messagebox.showinfo("Success", "Configuration saved", parent=config_window)
