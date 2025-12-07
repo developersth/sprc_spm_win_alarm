@@ -160,7 +160,7 @@ class DatabaseManager:
                     params.append(filters['alarm_type'])
                 
                 if filters.get('status') and filters['status'] != 'All':
-                    query += " AND status = %s"
+                    query += " AND LOWER(COALESCE(status, '')) = LOWER(%s)"
                     params.append(filters['status'])
                 
                 if filters.get('machine') and filters['machine'] != 'All':
@@ -172,8 +172,9 @@ class DatabaseManager:
                     params.append(filters['description'])
                 
                 if filters.get('search_text'):
-                    query += " AND (description ILIKE %s OR log_no ILIKE %s)"
+                    query += " AND (description ILIKE %s OR log_no ILIKE %s OR status ILIKE %s)"
                     search = f"%{filters['search_text']}%"
+                    params.append(search)
                     params.append(search)
                     params.append(search)
             
@@ -205,10 +206,17 @@ class DatabaseManager:
         """Get list of distinct statuses for filter dropdown"""
         try:
             cursor = self.connection.cursor()
-            cursor.execute("SELECT DISTINCT status FROM alarm_history ORDER BY status")
+            cursor.execute("SELECT DISTINCT COALESCE(status, 'Unknown') FROM alarm_history WHERE status IS NOT NULL ORDER BY status")
             statuses = ['All'] + [row[0] for row in cursor.fetchall() if row[0]]
             cursor.close()
-            return statuses
+            # Remove duplicates while preserving order
+            seen = set()
+            unique_statuses = []
+            for s in statuses:
+                if s not in seen:
+                    seen.add(s)
+                    unique_statuses.append(s)
+            return unique_statuses
         except Exception as e:
             logging.error(f"Error retrieving statuses: {e}")
             return ['All']

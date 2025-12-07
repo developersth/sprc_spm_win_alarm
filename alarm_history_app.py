@@ -6,6 +6,7 @@ import threading
 import csv
 import json
 from database import DatabaseManager
+from styled_button import StyledButton
 
 # สมมติว่าไฟล์นี้มีอยู่จริงสำหรับการรันโค้ด
 # from modbus_alarm_service import ModbusAlarmMonitor 
@@ -33,15 +34,17 @@ class AlarmHistoryApp:
         self.root.geometry("1500x750")
         
         # 🎨 **DARK MODE COLOR PALETTE**
-        self.primary_bg = '#212529' # Dark Gray Background (Main)
-        self.secondary_bg = '#343a40' # Slightly Lighter Dark Gray (Frames/Input)
-        self.text_color = '#f8f9fa' # Light Text
-        self.accent_color = '#007bff' # Blue (Primary Action)
+        self.primary_bg = '#1a1a1a' # Very Dark Background
+        self.secondary_bg = '#2d2d2d' # Dark Gray (Frames/Input)
+        self.text_color = '#ffffff' # White Text
+        self.accent_color = '#0066cc' # Bright Blue (Primary Action)
         self.success_color = '#28a745' # Green
-        self.danger_color = '#dc3545' # Red
+        self.danger_color = '#ff4444' # Bright Red
         self.info_color = '#17a2b8' # Cyan/Info
-        self.disabled_color = '#495057' # Darker Gray for disabled elements
-        self.tree_fg = '#ced4da' # Light Gray Text for Treeview
+        self.disabled_color = '#555555' # Medium Gray
+        self.tree_fg = '#e0e0e0' # Light Gray Text
+        self.button_hover = '#0052a3' # Darker Blue on hover
+        self.border_color = '#444444' # Border color
 
         self.root.configure(bg=self.primary_bg)
         
@@ -164,31 +167,31 @@ class AlarmHistoryApp:
         )
         self.monitor_status_label.pack(side='left', padx=10)
         
-        # Start/Stop button - **ใช้ tk.Button เพื่อควบคุมสีพื้นหลังของปุ่มโดยตรง**
-        self.modbus_btn = tk.Button(
+        # Start/Stop button - **ใช้ StyledButton เพื่อ fix สีบน macOS**
+        self.modbus_btn = StyledButton(
             modbus_control_frame,
             text="Start Monitoring",
-            bg=self.success_color,
-            fg='white',
-            font=('Arial', 10, 'bold'),
             command=self.toggle_modbus_monitor,
-            padx=15,
-            pady=5,
-            relief='flat' 
+            bg_color=self.success_color,
+            fg_color='white',
+            font=('Arial', 11, 'bold'),
+            padx=20,
+            pady=8,
+            activebackground='#20c232'
         )
-        self.modbus_btn.pack(side='left', padx=5)
+        self.modbus_btn.pack(side='left', padx=8)
         
         # Config button
-        config_btn = tk.Button(
+        config_btn = StyledButton(
             modbus_control_frame,
             text="⚙ Config",
-            bg=self.disabled_color, # สีเทาเข้ม
-            fg='white',
-            font=('Arial', 10, 'bold'),
             command=self.open_config_window,
-            padx=10,
-            pady=5,
-            relief='flat' 
+            bg_color=self.disabled_color,
+            fg_color='white',
+            font=('Arial', 11, 'bold'),
+            padx=15,
+            pady=8,
+            activebackground='#666666'
         )
         config_btn.pack(side='left', padx=5)
         
@@ -197,7 +200,7 @@ class AlarmHistoryApp:
         filter_frame.pack(pady=10, padx=20, fill='x')
         
         # 🏷️ Label Style
-        label_style = {'bg': self.primary_bg, 'font': ('Arial', 10), 'fg': self.text_color}
+        label_style = {'bg': self.primary_bg, 'font': ('Arial', 11, 'bold'), 'fg': self.text_color}
         
         # Row 0 & 1: Date Range
         tk.Label(filter_frame, text="From Date", **label_style).grid(row=0, column=0, sticky='w', padx=5, pady=(5, 0))
@@ -213,12 +216,24 @@ class AlarmHistoryApp:
             borderwidth=2,
             date_pattern='dd/mm/yyyy',
             selectbackground=self.accent_color, # สีเมื่อเลือกวันที่
-            selectforeground='white'
+            selectforeground='white',
+            year=datetime.now().year,
+            month=datetime.now().month,
+            day=datetime.now().day
         )
         self.from_date.grid(row=1, column=0, padx=5, pady=(0, 5))
         
-        # 🕐 Time Entry - **ใช้ ttk.Entry เพื่อให้ได้ Style ที่เข้ากัน**
-        self.from_time = ttk.Entry(filter_frame, width=10, font=('Arial', 10))
+        # 🕐 Time Entry - **ใช้ tk.Entry เพื่อให้ได้สีที่สวยงาม**
+        self.from_time = tk.Entry(
+            filter_frame, 
+            width=12,
+            font=('Arial', 11),
+            bg=self.secondary_bg,
+            fg=self.tree_fg,
+            insertbackground=self.text_color,
+            relief='solid',
+            borderwidth=1
+        )
         self.from_time.insert(0, "00:00:00")
         self.from_time.grid(row=1, column=1, padx=5, pady=(0, 5))
         
@@ -230,11 +245,23 @@ class AlarmHistoryApp:
             borderwidth=2,
             date_pattern='dd/mm/yyyy',
             selectbackground=self.accent_color,
-            selectforeground='white'
+            selectforeground='white',
+            year=datetime.now().year,
+            month=datetime.now().month,
+            day=datetime.now().day
         )
         self.to_date.grid(row=1, column=2, padx=5, pady=(0, 5))
         
-        self.to_time = ttk.Entry(filter_frame, width=10, font=('Arial', 10))
+        self.to_time = tk.Entry(
+            filter_frame, 
+            width=12,
+            font=('Arial', 11),
+            bg=self.secondary_bg,
+            fg=self.tree_fg,
+            insertbackground=self.text_color,
+            relief='solid',
+            borderwidth=1
+        )
         self.to_time.insert(0, "23:59:59")
         self.to_time.grid(row=1, column=3, padx=5, pady=(0, 5))
         
@@ -280,27 +307,33 @@ class AlarmHistoryApp:
         
         # 🔍 Search Box
         self.search_var = tk.StringVar()
-        search_entry = ttk.Entry(
+        search_entry = tk.Entry(
             filter_frame, 
             textvariable=self.search_var,
-            width=30,
-            font=('Arial', 10)
+            width=35,
+            font=('Arial', 11),
+            bg=self.secondary_bg,
+            fg=self.tree_fg,
+            insertbackground=self.text_color,
+            relief='solid',
+            borderwidth=1
         )
         search_entry.grid(row=3, column=4, padx=5, pady=(0, 5), sticky='ew')
+        search_entry.bind('<Return>', lambda e: self.search_data())
         
         # 🔎 Search Button
-        search_btn = tk.Button(
+        search_btn = StyledButton(
             filter_frame,
-            text="Search",
-            bg=self.accent_color,
-            fg='white',
-            font=('Arial', 10, 'bold'),
+            text="🔍 Search",
             command=self.search_data,
-            padx=15,
-            pady=5,
-            relief='flat'
+            bg_color=self.accent_color,
+            fg_color='white',
+            font=('Arial', 11, 'bold'),
+            padx=20,
+            pady=8,
+            activebackground=self.button_hover
         )
-        search_btn.grid(row=3, column=5, padx=5, pady=(0, 5))
+        search_btn.grid(row=3, column=5, padx=8, pady=(0, 5))
         
         # 📦 **Table Frame**
         table_frame = tk.Frame(self.root, bg=self.secondary_bg)
@@ -345,6 +378,9 @@ class AlarmHistoryApp:
         
         self.tree.pack(fill='both', expand=True)
         
+        # Bind double-click event to show detail popup
+        self.tree.bind('<Double-1>', self.on_tree_double_click)
+        
         # 🎨 **Configure row colors (Tags) - ใช้สีอ่อนลงและนุ่มนวลขึ้นใน Dark Mode**
         self.tree.tag_configure('alarm', background='#3e3e3e', foreground='#ffc107') # Yellowish text on dark gray
         self.tree.tag_configure('event', background='#3e3e3e', foreground='#28a745') # Green text on dark gray
@@ -361,7 +397,7 @@ class AlarmHistoryApp:
             text="Total Records: 0",
             bg=self.primary_bg,
             fg=self.text_color,
-            font=('Arial', 10, 'bold')
+            font=('Arial', 12, 'bold')
         )
         self.record_label.pack(side='left')
         
@@ -373,38 +409,40 @@ class AlarmHistoryApp:
             variable=self.auto_refresh_var,
             bg=self.primary_bg,
             fg=self.text_color,
-            selectcolor=self.secondary_bg, 
-            font=('Arial', 9)
+            selectcolor=self.accent_color,
+            font=('Arial', 10),
+            activebackground=self.primary_bg,
+            activeforeground=self.accent_color
         )
-        auto_refresh_cb.pack(side='left', padx=20)
+        auto_refresh_cb.pack(side='left', padx=25)
         
         # 🔄 Refresh Button
-        refresh_btn = tk.Button(
+        refresh_btn = StyledButton(
             bottom_frame,
-            text="Refresh",
-            bg=self.success_color,
-            fg='white',
-            font=('Arial', 10, 'bold'),
+            text="🔄 Refresh",
             command=self.load_data,
-            padx=15,
-            pady=5,
-            relief='flat'
+            bg_color=self.success_color,
+            fg_color='white',
+            font=('Arial', 11, 'bold'),
+            padx=18,
+            pady=8,
+            activebackground='#20c232'
         )
-        refresh_btn.pack(side='right', padx=5)
+        refresh_btn.pack(side='right', padx=8)
         
         # 📁 Export Button
-        export_btn = tk.Button(
+        export_btn = StyledButton(
             bottom_frame,
-            text="Export CSV",
-            bg=self.info_color,
-            fg='white',
-            font=('Arial', 10, 'bold'),
+            text="📊 Export CSV",
             command=self.export_csv,
-            padx=15,
-            pady=5,
-            relief='flat'
+            bg_color=self.info_color,
+            fg_color='white',
+            font=('Arial', 11, 'bold'),
+            padx=18,
+            pady=8,
+            activebackground='#1a9ba8'
         )
-        export_btn.pack(side='right', padx=5)
+        export_btn.pack(side='right', padx=8)
         
         # Load descriptions for filter
         self.load_descriptions()
@@ -422,13 +460,19 @@ class AlarmHistoryApp:
         if not self.modbus_monitor.running:
             try:
                 threading.Thread(target=self.modbus_monitor.start, daemon=True).start()
-                self.modbus_btn.config(text="Stop Monitoring", bg=self.danger_color)
+                self.modbus_btn.text = "Stop Monitoring"
+                self.modbus_btn.bg_color = self.danger_color
+                self.modbus_btn.active_bg = '#ff5555'
+                self.modbus_btn.draw_button(self.danger_color)
                 messagebox.showinfo("Success", "Modbus monitoring started")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to start monitoring:\n{str(e)}")
         else:
             self.modbus_monitor.stop()
-            self.modbus_btn.config(text="Start Monitoring", bg=self.success_color)
+            self.modbus_btn.text = "Start Monitoring"
+            self.modbus_btn.bg_color = self.success_color
+            self.modbus_btn.active_bg = '#20c232'
+            self.modbus_btn.draw_button(self.success_color)
             messagebox.showinfo("Success", "Modbus monitoring stopped")
 
     def update_monitor_status(self):
@@ -475,23 +519,22 @@ class AlarmHistoryApp:
         form_frame = tk.Frame(config_window, bg=self.primary_bg)
         form_frame.pack(pady=10, padx=20, fill='x')
         
-        # Host
-        tk.Label(form_frame, text="Host/IP:", bg=self.primary_bg, fg=self.text_color).grid(row=0, column=0, sticky='w', pady=5)
-        host_entry = ttk.Entry(form_frame, width=30)
+        tk.Label(form_frame, text="Host/IP:", bg=self.primary_bg, fg=self.text_color, font=('Arial', 11)).grid(row=0, column=0, sticky='w', pady=8)
+        host_entry = tk.Entry(form_frame, width=35, font=('Arial', 11), bg=self.secondary_bg, fg=self.tree_fg, insertbackground=self.text_color, relief='solid', borderwidth=1)
         host_entry.insert(0, config['modbus']['host'])
-        host_entry.grid(row=0, column=1, pady=5, padx=10)
+        host_entry.grid(row=0, column=1, pady=8, padx=10)
         
         # Port
-        tk.Label(form_frame, text="Port:", bg=self.primary_bg, fg=self.text_color).grid(row=1, column=0, sticky='w', pady=5)
-        port_entry = ttk.Entry(form_frame, width=30)
+        tk.Label(form_frame, text="Port:", bg=self.primary_bg, fg=self.text_color, font=('Arial', 11)).grid(row=1, column=0, sticky='w', pady=8)
+        port_entry = tk.Entry(form_frame, width=35, font=('Arial', 11), bg=self.secondary_bg, fg=self.tree_fg, insertbackground=self.text_color, relief='solid', borderwidth=1)
         port_entry.insert(0, str(config['modbus']['port']))
-        port_entry.grid(row=1, column=1, pady=5, padx=10)
+        port_entry.grid(row=1, column=1, pady=8, padx=10)
         
         # Scan interval
-        tk.Label(form_frame, text="Scan Interval (sec):", bg=self.primary_bg, fg=self.text_color).grid(row=2, column=0, sticky='w', pady=5)
-        interval_entry = ttk.Entry(form_frame, width=30)
+        tk.Label(form_frame, text="Scan Interval (sec):", bg=self.primary_bg, fg=self.text_color, font=('Arial', 11)).grid(row=2, column=0, sticky='w', pady=8)
+        interval_entry = tk.Entry(form_frame, width=35, font=('Arial', 11), bg=self.secondary_bg, fg=self.tree_fg, insertbackground=self.text_color, relief='solid', borderwidth=1)
         interval_entry.insert(0, str(config['monitoring']['scan_interval']))
-        interval_entry.grid(row=2, column=1, pady=5, padx=10)
+        interval_entry.grid(row=2, column=1, pady=8, padx=10)
         
         def save_config():
             try:
@@ -509,8 +552,8 @@ class AlarmHistoryApp:
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to save:\n{str(e)}", parent=config_window)
         
-        tk.Button(config_window, text="Save", command=save_config,
-                 bg=self.success_color, fg='white', padx=30, pady=5, relief='flat').pack(pady=20)
+        tk.Button(config_window, text="💾 Save", command=save_config,
+                 bg=self.success_color, fg='white', padx=30, pady=10, font=('Arial', 12, 'bold'), relief='flat', cursor='hand2', activebackground='#20c232', activeforeground='white', highlightthickness=0, bd=0, overrelief='flat').pack(pady=20)
     
     def auto_refresh_data(self):
         """Auto-refresh data every 5 seconds"""
@@ -526,43 +569,13 @@ class AlarmHistoryApp:
         self.description_combo['values'] = descriptions
     
     def load_data(self):
-        """Load data from database"""
-        if not self.db_manager:
-            return
-        
-        try:
-            for item in self.tree.get_children():
-                self.tree.delete(item)
-            
-            rows = self.db_manager.get_alarm_history(limit=1000)
-            
-            for idx, row in enumerate(rows, start=1):
-                log_no, date_time, alarm_type, description, status, machine = row
-                date_time_str = date_time.strftime('%d/%m/%Y %H:%M:%S')
-                
-                tag = ''
-                if alarm_type and alarm_type.lower() == 'alarm':
-                    tag = 'alarm'
-                elif alarm_type and alarm_type.lower() == 'event':
-                    tag = 'event'
-                
-                if status and status.lower() == 'fault':
-                    tag = 'fault'
-                elif status and status.lower() == 'normal':
-                    tag = 'normal'
-                
-                self.tree.insert('', 'end', values=(
-                    idx, log_no, date_time_str, alarm_type, description, status, machine
-                ), tags=(tag,))
-            
-            self.record_label.config(text=f"Total Records: {len(rows)}")
-            
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to load data: {str(e)}")
+        """Load data from database (calls search to apply filters)"""
+        self.search_data()
     
     def search_data(self):
         """Search data with filters"""
         if not self.db_manager:
+            messagebox.showerror("Error", "Database manager not initialized")
             return
         
         try:
@@ -585,10 +598,11 @@ class AlarmHistoryApp:
                 filters['start_date'] = from_datetime
                 filters['end_date'] = to_datetime
             except ValueError:
-                messagebox.showwarning("Warning", "Invalid time format (must be HH:MM:SS)", parent=self.root)
+                messagebox.showwarning("Warning", "Invalid time format (must be HH:MM:SS)")
                 return
-            except Exception:
-                pass
+            except Exception as e:
+                messagebox.showerror("Error", f"Date parsing error: {str(e)}")
+                return
             
             if self.type_var.get() != 'All':
                 filters['alarm_type'] = self.type_var.get()
@@ -602,7 +616,11 @@ class AlarmHistoryApp:
             if self.search_var.get():
                 filters['search_text'] = self.search_var.get()
             
+            # Debug: Print filters
+            # print(f"Search filters: {filters}")
+            
             rows = self.db_manager.get_alarm_history(filters=filters)
+            print(f"Found {len(rows)} records")
             
             for idx, row in enumerate(rows, start=1):
                 log_no, date_time, alarm_type, description, status, machine = row
@@ -626,6 +644,7 @@ class AlarmHistoryApp:
             self.record_label.config(text=f"Total Records: {len(rows)}")
             
         except Exception as e:
+            print(f"Search error: {str(e)}")
             messagebox.showerror("Error", f"Error searching data:\n{str(e)}")
     
     def export_csv(self):
@@ -657,6 +676,138 @@ class AlarmHistoryApp:
         
         if hasattr(self, 'db_manager') and self.db_manager:
             self.db_manager.close()
+    
+    def on_tree_double_click(self, event):
+        """Handle double-click on tree row to show detail popup"""
+        selection = self.tree.selection()
+        if not selection:
+            return
+        
+        item = selection[0]
+        values = self.tree.item(item)['values']
+        
+        if not values:
+            return
+        
+        # Extract row data
+        item_num, log_no, date_time_str, alarm_type, description, status, machine = values
+        
+        # Create detail popup window
+        self.show_detail_popup(item_num, log_no, date_time_str, alarm_type, description, status, machine)
+    
+    def show_detail_popup(self, item_num, log_no, date_time_str, alarm_type, description, status, machine):
+        """Show detailed information in a popup window"""
+        detail_window = tk.Toplevel(self.root)
+        detail_window.title(f"Alarm Detail - Log No. {log_no}")
+        detail_window.geometry("600x500")
+        detail_window.configure(bg=self.primary_bg)
+        detail_window.resizable(True, True)
+        
+        # Make window stay on top
+        detail_window.transient(self.root)
+        detail_window.grab_set()
+        
+        # Main frame with padding
+        main_frame = tk.Frame(detail_window, bg=self.primary_bg)
+        main_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        
+        # Title
+        title_label = tk.Label(
+            main_frame,
+            text=f"Log No. {log_no}",
+            bg=self.primary_bg,
+            fg=self.accent_color,
+            font=('Arial', 14, 'bold')
+        )
+        title_label.pack(anchor='w', pady=(0, 20))
+        
+        # Create scrollable frame for details
+        canvas = tk.Canvas(main_frame, bg=self.secondary_bg, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(main_frame, orient='vertical', command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg=self.secondary_bg)
+        
+        scrollable_frame.bind(
+            '<Configure>',
+            lambda e: canvas.configure(scrollregion=canvas.bbox('all'))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor='nw')
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Detail fields
+        detail_fields = [
+            ('Item Number', str(item_num)),
+            ('Log Number', str(log_no)),
+            ('Date & Time', str(date_time_str)),
+            ('Alarm Type', str(alarm_type) if alarm_type else '-'),
+            ('Status', str(status) if status else '-'),
+            ('Machine', str(machine) if machine else '-'),
+            ('Description', str(description) if description else '-'),
+        ]
+        
+        for label_text, value in detail_fields:
+            # Label
+            label = tk.Label(
+                scrollable_frame,
+                text=f"{label_text}:",
+                bg=self.secondary_bg,
+                fg=self.accent_color,
+                font=('Arial', 11, 'bold'),
+                anchor='w'
+            )
+            label.pack(anchor='w', pady=(10, 2), padx=10)
+            
+            # Value
+            if label_text == 'Description':
+                # Use text widget for long description
+                value_text = tk.Text(
+                    scrollable_frame,
+                    bg='#404040',
+                    fg=self.text_color,
+                    font=('Arial', 10),
+                    height=4,
+                    width=60,
+                    wrap='word',
+                    relief='sunken',
+                    bd=1
+                )
+                value_text.pack(anchor='w', padx=10, pady=(2, 10), fill='both', expand=True)
+                value_text.insert('1.0', value)
+                value_text.config(state='disabled')
+            else:
+                value_label = tk.Label(
+                    scrollable_frame,
+                    text=value,
+                    bg='#404040',
+                    fg=self.tree_fg,
+                    font=('Arial', 10),
+                    anchor='w',
+                    relief='sunken',
+                    bd=1,
+                    padx=8,
+                    pady=5
+                )
+                value_label.pack(anchor='w', padx=10, pady=(2, 10), fill='x')
+        
+        canvas.pack(side='left', fill='both', expand=True)
+        scrollbar.pack(side='right', fill='y')
+        
+        # Button frame
+        button_frame = tk.Frame(main_frame, bg=self.primary_bg)
+        button_frame.pack(pady=(20, 0), fill='x')
+        
+        # Close button
+        close_btn = StyledButton(
+            button_frame,
+            'Close',
+            command=detail_window.destroy,
+            bg_color=self.info_color,
+            fg_color='white',
+            font_spec=('Arial', 10, 'bold'),
+            padx=15,
+            pady=6
+        )
+        close_btn.pack(side='right', padx=5)
 
 def main():
     root = tk.Tk()
